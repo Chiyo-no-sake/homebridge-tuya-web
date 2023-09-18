@@ -1,5 +1,6 @@
 import {
   API,
+  Categories,
   Characteristic,
   DynamicPlatformPlugin,
   Logger,
@@ -28,14 +29,16 @@ import { GarageDoorAccessory } from "./accessories/GarageDoorAccessory";
 import { TemperatureSensorAccessory } from "./accessories/TemperatureSensorAccessory";
 import { Cache } from "./helpers/cache";
 import { WindowAccessory } from "./accessories/WindowAccessory";
+import { LightGroup } from "./accessory-groups/LightGroup";
 
 export type HomebridgeAccessory = PlatformAccessory<
   Partial<{
     cache: Cache;
     deviceId: string;
+    groupId: string;
   }>
 > & {
-  controller?: BaseAccessory;
+  controller?: BaseAccessory | LightGroup;
 };
 
 /**
@@ -117,6 +120,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       await this.tuyaWebApi.getOrRefreshToken();
       // run the method to discover / register your devices as accessories
       await this.discoverDevices();
+      this.configureGroups();
 
       if (this.pollingInterval) {
         //Tuya will probably still complain if we fetch a new request on the exact second.
@@ -144,6 +148,30 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
           this.log.debug(e.stack);
         }
       }
+    }
+  }
+
+  public configureGroups(): void {
+    const lightGroups = this.config.light_groups || [];
+    for (const lightGroup of lightGroups) {
+      const devices = lightGroup.devices.map((device) =>
+        this.accessories.get(this.generateUUID(device.id))?.controller
+      );
+
+      // Log a warning if any the devices are not found, display the name of the missing device
+      if (devices.includes(undefined)) {
+        this.log.warn(
+          "Could not find all devices for light group %s: %s",
+          lightGroup.name,
+          lightGroup.devices
+        );
+      }
+
+      // Remove undefined devices from the array
+      const definedDevices = devices.filter((d) => d !== undefined)  as BaseAccessory[];
+
+      // Create a new light group accessory, passing in the defined devices that will be controlled
+      this.addAccessoryGroup(lightGroup.id, lightGroup.name, definedDevices, Categories.LIGHTBULB)
     }
   }
 
@@ -259,6 +287,20 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     }
   }
 
+  private addAccessoryGroup(groupId: string, groupName: string, childrenAccessories: BaseAccessory[], category: Categories) {
+    this.log.debug("adding a new group of accessories: ")
+    const uuid = this.generateUUID(groupId);
+    const homebridgeAccessory = this.accessories.get(uuid);
+    new LightGroup(
+      this,
+      homebridgeAccessory,
+      childrenAccessories,
+      groupId,
+      groupName,
+      category
+    )
+  }
+
   private filterDeviceList(devices: TuyaDevice[] | undefined): TuyaDevice[] {
     if (!devices) {
       return [];
@@ -267,7 +309,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     const hiddenAccessoryIds = this.getHiddenAccessoryIds(devices);
     return devices
       .filter((d) => d.dev_type !== "scene" || allowedSceneIds.includes(d.id))
-      .filter((d) => !hiddenAccessoryIds.includes(d.id));
+      .filter((d) => !hiddenAccessoryIds.includes(d.id))
   }
 
   async discoverDevices(): Promise<void> {
@@ -309,6 +351,27 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of devices) {
       this.addAccessory(device);
+    }
+
+    // Here we build up device groups
+    for (const lightGroup of this.config.light_groups || []) {
+      const devices = lightGroup.devices.map((device) =>
+        this.accessories.get(this.generateUUID(device.id))
+      );
+
+      // Log a warning if any the devices are not found, display the name of the missing device
+      if (devices.includes(undefined)) {
+        this.log.warn(
+          "Could not find all devices for light group %s: %s",
+          lightGroup.name,
+          lightGroup.devices
+        );
+      }
+
+      // Remove undefined devices from the array
+      const definedDevices = devices.filter((d) => d !== undefined) as HomebridgeAccessory[];
+
+      // Create a new light group accessory, passing in the defined devices that will be controlled
     }
 
     await this.refreshDeviceStates(devices);

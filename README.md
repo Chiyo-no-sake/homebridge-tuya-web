@@ -1,5 +1,8 @@
 <span style="text-align: center">
 
+## Disclaimer
+This repo is a fork of [milo526/homebridge-tuya-web](https://github.com/milo526/homebridge-tuya-web) that adds configurable groups of lights. It is not intended to be used by anyone other than myself. If you want to use this, you should probably use the original repo.
+
 # Tuya Web
 
 [![verified-by-homebridge](https://badgen.net/badge/homebridge/verified/purple)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
@@ -67,6 +70,15 @@ You can also get community help in the [Homebridge Discord Server](https://disco
     "password": "xxxxxxxxxx",
     "countryCode": "xx",
     "platform": "tuya"
+  },
+  "light_groups": {
+    "resulting_name": "string",
+    "devices": [
+      {
+        "id": "string",
+        "type": "string"
+      }
+    ]
   }
 }
 ```

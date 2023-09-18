@@ -28,6 +28,13 @@ type Config = {
     pollingInterval?: number;
   };
   defaults?: Partial<TuyaDeviceDefaults>[];
+  light_groups?: {
+    id: string;
+    name: string,
+    devices: {
+      id: string,
+    }[]
+  }[]
   scenes?: boolean | string[];
 };
 
