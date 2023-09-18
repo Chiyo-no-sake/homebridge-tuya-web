@@ -338,6 +338,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
     const availableDeviceIds = devices.map((d) => this.generateUUID(d.id));
 
     for (const cachedDeviceId of cachedDeviceIds) {
+      // Remove cached devices that are no longer available
       if (!availableDeviceIds.includes(cachedDeviceId)) {
         const device = this.accessories.get(cachedDeviceId)!;
         this.log.warn(
@@ -353,27 +354,7 @@ export class TuyaWebPlatform implements DynamicPlatformPlugin {
       this.addAccessory(device);
     }
 
-    // Here we build up device groups
-    for (const lightGroup of this.config.light_groups || []) {
-      const devices = lightGroup.devices.map((device) =>
-        this.accessories.get(this.generateUUID(device.id))
-      );
-
-      // Log a warning if any the devices are not found, display the name of the missing device
-      if (devices.includes(undefined)) {
-        this.log.warn(
-          "Could not find all devices for light group %s: %s",
-          lightGroup.name,
-          lightGroup.devices
-        );
-      }
-
-      // Remove undefined devices from the array
-      const definedDevices = devices.filter((d) => d !== undefined) as HomebridgeAccessory[];
-
-      // Create a new light group accessory, passing in the defined devices that will be controlled
-    }
-
+    // Refresh device states
     await this.refreshDeviceStates(devices);
   }
 

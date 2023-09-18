@@ -12,10 +12,8 @@ import {
 } from "homebridge";
 import debounce from "lodash.debounce";
 import { PLUGIN_NAME } from "../settings";
-import { inspect } from "util";
 import { DebouncedPromise } from "../helpers/DebouncedPromise";
 import { ErrorCallback, RatelimitError } from "../errors";
-import { GeneralCharacteristic } from "../accessories/characteristics";
 import {
   DeviceState,
   TuyaApiMethod,
@@ -367,7 +365,6 @@ export class LightGroup {
     payload: TuyaApiPayload<Method>,
     cache: T
   ): Promise<void> {
-    // @ts-ignore
     this.cache.merge(cache);
 
     return this.platform.tuyaWebApi.setDeviceState(
